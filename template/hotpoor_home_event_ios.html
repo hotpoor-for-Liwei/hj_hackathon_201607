@@ -6,7 +6,7 @@
     <meta name="format-detection" content="telephone=no"/>
     <script src="/static/js/jquery-1.11.3.min.js"></script>
     <script src="/static/js/jweixin-1.0.0.js"></script>
-    <link rel="stylesheet" type="text/css" href="/static/css/hotpoor_home_event.css?v=1.3">
+    <link rel="stylesheet" type="text/css" href="/static/css/hotpoor_home_event.css?v=1.10">
     <style type="text/css">
     body{
         overflow-y: auto;
@@ -170,6 +170,7 @@
     var AIM_ID = "{{ handler.aim_id }}";
     var AIM_TYPE = "{{ handler.aim_type }}";
     var APP = "{{ handler.app }}";
+    var MEMBERS_JSON = {};
 </script>
 <script type="text/javascript">
     event_add_net = false;
@@ -211,6 +212,9 @@
                     event_order_list_net = false;
                     first_event_order_id = data.first_event_order_id
                     last_event_order_id = data.last_event_order_id
+                    for (member in data.members){
+                        MEMBERS_JSON[member]=data.members[member];
+                    }
                     for (i in data.orders){
                         order_line = order_to_element(data.orders[i]);
                         $("#event_order_list").append(order_line);
@@ -289,16 +293,46 @@
         }
         if (_headers.length <= 1) {
             _head_class = "qrcode_head_1";
-        else if (_headers.length > 4) {
+        } else if (_headers.length > 4) {
             _head_class = "qrcode_head_9";
         } else {
             _head_class = "qrcode_head_4";
         }
-        _headers_html = "<div class=\"qrcode_head "+_head_class+"\"><img src='#{i}'></div>";
+        _headers_html = "";
+        _head_style_plus = "";
+        for (_i in _headers){
+            if (_headers.length == 2 && _i <= 1){
+                _head_style_plus = "margin-top:11px;";
+            }else if (_headers.length == 3 && _i == 0){
+                _head_style_plus = "margin-left:11px;";
+            }else if (_headers.length == 5 && _i == 0){
+                _head_style_plus = "margin-left:7px;margin-top:7px;";
+            }else if (_headers.length == 5 && _i == 1){
+                _head_style_plus = "margin-top:7px;";
+            }else if (_headers.length == 6 && _i <= 2){
+                _head_style_plus = "margin-top:7px;";
+            }else if (_headers.length == 7 && _i == 0){
+                _head_style_plus = "margin-left:14px;margin-right:14px;";
+            }else if (_headers.length == 8 && _i == 0){
+                _head_style_plus = "margin-left:7px;";
+            }else{
+                _head_style_plus = "";
+            }
+            _headers_html += "<div class=\"event_order_line_head "+_head_class+"\" style=\""+_head_style_plus+"\"><img src=\""+MEMBERS_JSON[_headers[_i]]["headimgurl"]+"\"></div>";
+        }
 
+        _remark_last = _data["remark"][0]
+        _remark_html = ""
+        if (USER_ID == _remark_last[0]){
+            _remark_html = $('<ct><ct>').text(_remark_last[1]).html();
+        }else{
+            _remark_html = $('<ct><ct>').text(MEMBERS_JSON[_remark_last[0]]["name"]+": "+_remark_last[1]).html();
+        }
         
         _html = "<div class=\"event_order_line\" data-id=\""+_id+"\" align=\"center\">"
+                +"<div class=\"event_order_line_head_area\">"+_headers_html+"</div>"
                 +"<div class=\"event_order_line_title\">"+_data["title"]+"</div>"
+                +"<div class=\"event_order_line_last_remark\">"+_remark_html+"</div>"
                 +"<div class=\"event_order_line_bottom\"></div>"
         +"</div>";
         return _html;
