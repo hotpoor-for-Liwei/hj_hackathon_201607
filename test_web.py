@@ -113,7 +113,6 @@ settings = {
     }
 
 application = tornado.web.Application([
-    # (r"/hotpoor",HotpoorHandler),
     (r"/api/file/check_excel",CheckExcelAPIHandler),
 
     (r"/api/user/update_weixin_data/",UpdateWeixinDataUserAPIHandler),
@@ -137,15 +136,6 @@ application = tornado.web.Application([
     #==========================
     (r"/home/map/(.*)",                     HomeMapBaseHandler),
     (r"/home/map",                          HomeMapHandler),
-
-    #==========================
-    #/musicnotes/(.*)产品系列 独立
-    #==========================
-    (r"/home/musicnotes/midi_whitneymusicbox", HomeMusicNotesMidiWhitneyMusicBoxHandler),
-    (r"/home/musicnotes/midi_player", HomeMusicNotesMidiPlayerHandler),
-    (r"/home/musicnotes/midi_basic", HomeMusicNotesMidiBasicHandler),
-    (r"/home/musicnotes/(.*)", HomeMusicNotesBaseHandler),
-    (r"/home/musicnotes", HomeMusicNotesHandler),
 
     #==========================
     #/tools/(.*)产品系列 独立
