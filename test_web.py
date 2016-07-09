@@ -104,6 +104,170 @@ class CheckExcelAPIHandler(WebRequest):
 
         self.finish({u"type":u"excel",u"data":{}})
 
+class WechatWebpayHandler(WebRequest):
+    @tornado.gen.coroutine
+    def get(self):
+        if "Mobile" in self.request.headers.get("User-Agent", "") and "MicroMessenger" in self.request.headers.get("User-Agent", ""):
+            weixin_app = self.get_argument("weixin_app","")
+            self.app = weixin_app
+            openid = self.get_argument("openid","")
+            order_id = self.get_argument("order","")
+            user_agent = self.request.headers.get("User-Agent","")
+            weixin_version = user_agent[user_agent.index('MicroMessenger/')+15:]
+            weixin_version = int(weixin_version[:weixin_version.index('.')])
+            weixin_pay = False
+            if weixin_version >=5:
+                weixin_pay = True
+            if not weixin_pay:
+                self.finish(u"This Wechat Version is not ok for Payment!")
+                return
+            if weixin_app in weixin_apps:
+                #获取JSSDK
+                if (int(time.time()) - weixin_JS_SDK_access_token_timers.get(weixin_app,0)) > 3600:
+                    weixin_JS_SDK_access_token_timers[weixin_app] = int(time.time())
+                    http_client = tornado.httpclient.AsyncHTTPClient()
+                    url = "https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid="+weixin_apps_dev_info.get(weixin_app, "").get("AppId","")+"&secret="+weixin_apps_dev_info.get(weixin_app, "").get("AppSecret","")
+                    response = yield http_client.fetch(url)
+                    data = tornado.escape.json_decode(response.body)
+                    weixin_JS_SDK_access_tokens[weixin_app] = data.get('access_token')
+                    url = "https://api.weixin.qq.com/cgi-bin/ticket/getticket?access_token="+weixin_JS_SDK_access_tokens[weixin_app]+"&type=jsapi"
+                    response = yield http_client.fetch(url)
+                    data = tornado.escape.json_decode(response.body)
+                    weixin_JS_SDK_jsapi_tickets[weixin_app] = data.get('ticket')
+
+                # print "======"
+                # print weixin_JS_SDK_access_tokens
+                sign = WeixinJSSDKSign(weixin_JS_SDK_jsapi_tickets[weixin_app], weixin_JS_SDK_access_token_timers[weixin_app], self.request.full_url())
+                self.wx_app = weixin_app
+                self.wx_appid = weixin_apps_dev_info[weixin_app].get("AppId","")
+                self.wx_ret = sign.sign()
+                self.wx_timestamp = self.wx_ret['timestamp']
+                self.wx_noncestr = self.wx_ret['nonceStr']
+                self.wx_signature = self.wx_ret['signature']
+                if not self.current_user:
+                    return
+                self.user_id = self.current_user['id']
+                #获取open_id
+                self.openid = openid
+                
+                if self.openid:
+                    order = nomagic._get_entity_by_id(order_id)
+                    if not order:
+                        self.finish(u"Can't find this order!")
+                        return
+                    self.body = order.get("subtype",u"Hotpoor序·支付平台")
+                    self.price = int(order.get("payment_fee","1"))
+                    self.payment_status = order.get("payment_status",u"未支付")
+                    print self.payment_status
+                    remote_ip = self.request.headers.get("X-Forwarded-For", "").split(", ")[0] or self.request.remote_ip
+                #     trade_no = conn.execute_lastrowid("INSERT INTO payment_weixin (user_id, doc_id, prepay_info, transaction_info, fee, transaction_id, other_info) VALUES (%s, '', '', '', 0, '', %s)", current_user_id, json_encode({"ref_id": ""}))
+                    trade_no = int(time.time())
+                    # nonce = uuid.uuid4().hex
+                    nonce = self.wx_noncestr
+                    # print "uuid:%s" % nonce
+                    output = u"""<xml>
+    <appid>%s</appid>
+    <attach>%s_%s_%s</attach>
+    <body>%s</body>
+    <mch_id>%s</mch_id>
+    <nonce_str>%s</nonce_str>
+    <notify_url>http://www.hotpoor.org/wechat/webpay/callback/%s</notify_url>
+    <openid>%s</openid>
+    <out_trade_no>%s</out_trade_no>
+    <spbill_create_ip>%s</spbill_create_ip>
+    <total_fee>%s</total_fee>
+    <trade_type>JSAPI</trade_type>
+    <sign>%s</sign>
+</xml>""" % (   weixin_apps_dev_info[weixin_app].get("AppId",""),
+                weixin_app,
+                self.user_id,
+                order_id,
+                self.body,
+                weixin_apps_dev_info[weixin_app].get("ShopNumber",""),
+                nonce,
+                # order_id,
+                weixin_app,
+                self.openid,
+                trade_no,
+                remote_ip,
+                self.price,
+             "%s")
+
+                    data = xmltodict.parse(output)["xml"]
+                    del data["sign"]
+                    temp_str = "&".join(["%s=%s" % (k.encode("utf8"), v.encode('utf8')) for k, v in data.items()])
+                    # temp_str += "&key=%s" % weixin_apps_dev_info[weixin_app].get("ShopNumber","")
+                    temp_str += "&key=%s" % weixin_apps_dev_info[weixin_app].get("ShopNumberKey","")
+                    sign = hashlib.md5(temp_str).hexdigest().upper()
+                    xml = output % sign
+                    # xml = String(xml.toString().getBytes(), "ISO8859-1")
+                    # print xml
+                    http_client = tornado.httpclient.AsyncHTTPClient()
+                    request = tornado.httpclient.HTTPRequest(
+                                url = "https://api.mch.weixin.qq.com/pay/unifiedorder",
+                                method = "POST",
+                                body = xml)
+                    response = yield http_client.fetch(request)
+                    # conn.execute("UPDATE payment_weixin SET prepay_info = %s WHERE id = %s", response.body, trade_no)
+                    result = xmltodict.parse(response.body)["xml"]
+                    # print "^^^^^^^^^"
+                    # print result
+                    self.prepay_id = result["prepay_id"]
+                    # self.timestamp = str(int(time.time()))
+                    self.timestamp = str(self.wx_timestamp)
+                    # self.nonce = uuid.uuid4().hex
+                    self.nonce = result["nonce_str"]
+
+                    data = {
+                        "appId": weixin_apps_dev_info[weixin_app].get("AppId",""),
+                        "nonceStr": self.nonce,
+                        "timeStamp": self.timestamp,
+                        "package": "prepay_id=%s" % self.prepay_id,
+                        "signType": "MD5",
+                    }
+                    # print data
+                    # print self.wx_timestamp
+                    # print self.wx_noncestr
+                    temp_str = "&".join(["%s=%s" % (k.encode("utf8"), data[k].encode('utf8')) for k in sorted(data.keys())])
+                    temp_str += "&key=%s" % weixin_apps_dev_info[weixin_app].get("ShopNumberKey","")
+                    self.pay_sign = hashlib.md5(temp_str).hexdigest().upper()
+
+
+
+                self.render("template/wechat_web_pay.html")
+                # self.finish({"weixin_app":weixin_app,"webpaytest":"ok"})
+            else:
+                self.finish({"weixin_app":weixin_app,"webpay":"noapp"})
+
+class WechatWebpayCallbackHandler(WebRequest):
+    def post(self,weixin_app):
+        weixin_app = weixin_app
+        if weixin_app in weixin_apps:
+            data = xmltodict.parse(self.request.body)["xml"]
+            sign = data["sign"]
+            del data["sign"]
+
+            temp_str = "&".join(["%s=%s" % (k.encode("utf8"), data[k].encode('utf8')) for k in sorted(data.keys())])
+            temp_str += "&key=%s" % weixin_apps_dev_info[weixin_app].get("ShopNumberKey","")
+            if sign != hashlib.md5(temp_str).hexdigest().upper():
+                raise tornado.web.HTTPError(403)
+                return
+            fee = data["total_fee"]
+            transaction_id = data["transaction_id"]
+            out_trade_no = data["out_trade_no"]
+            app,user_id,order_id =  data["attach"].split("_")
+            return_code = data["return_code"]
+            if return_code == "SUCCESS":
+                if app == "bangfer" or app == "hotpoor" or app == "lovebangfer":
+                    order = nomagic._get_entity_by_id(order_id)
+                    if order["payment_status"] == u"未支付":
+                        order_content = u"微信支付成功"
+                        order["payment_status"] = u"已支付"
+                        order["weixin_pay_call_back"] = data
+                        board = [user_id,order_content,int(time.time())]
+                        order["remark"].insert(0,board)
+                        nomagic.order.update_order(order_id,order)
+                        conn.execute("INSERT INTO index_weixin_pay (user_id,order_id,fee,app,createtime,transaction_id,out_trade_no,done,finishtime) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s)", user_id,order_id,fee,app,board[2],transaction_id,out_trade_no,1,board[2])
 
 class WechatWebpayTestHandler(WebRequest):
     @tornado.gen.coroutine
