@@ -613,15 +613,186 @@ def Schedule(a,b,c):
         per = 100
     print '%.2f%%' % per
 
-class HomeEventHandler(WebRequest):
+class HomeEventOrdersListNewAPIHandler(WebRequest):
     @tornado.gen.coroutine
-    def get(self):
+    def post(self):
+        return
+        # if not self.current_user:
+        #     return
+        # first_event_order_id = self.get_argument("first_event_order_id",None)
+        # if not first_event_order_id:
+        #     return
+        # user_id = self.current_user["id"]
+        # user = nomagic._get_entity_by_id(user_id)
+        # orders_json = []
+        # members_json = {}
+        # members_ids = set()
+        # self.finish({"orders":orders_json,"members":members_json,"first_event_order_id":first_event_order_id})
+class HomeEventOrdersListOldAPIHandler(WebRequest):
+    @tornado.gen.coroutine
+    def post(self):
+        return
+        # if not self.current_user:
+        #     return
+        # last_event_order_id = self.get_argument("last_event_order_id",None)
+        # if not last_event_order_id:
+        #     return
+        # user_id = self.current_user["id"]
+        # user = nomagic._get_entity_by_id(user_id)
+        # orders_json = []
+        # members_json = {}
+        # members_ids = set()
+
+        # for order in orders:
+        #     members_ids = members_ids | set(order[1]["members"])
+        #     members_ids = members_ids | set(order[1]["editors"])
+        #     orders_json.append(order)
+        # members = nomagic._get_entities_by_ids(members_ids)
+        # for member in members:
+        #     members_json[member[0]] = {"name":member[1].get("name","") or member[1].get("mobilephone_china",u"普通用户"),"tel":member[1].get("mobilephone_china","15201950688")}
+        # self.finish({"orders":orders_json,"members":members_json,"last_event_order_id":last_event_order_id})
+class HomeEventOrdersListAPIHandler(WebRequest):
+    @tornado.gen.coroutine
+    def post(self):
         if not self.current_user:
-            self.render("template/hotpoor_home_event_start.html")
             return
         user_id = self.current_user["id"]
-        self.redirect("/home/event/%s"%user_id)
+        user = nomagic._get_entity_by_id(user_id)
+        event_order_list_ids = user.get("event_orders",[])
+        event_orders = nomagic._get_entities_by_ids(event_order_list_ids)
+        orders_json = []
+        members_json = {}
+        members_ids = set()
+        order_number_now = 0
+        first_event_order_id = None
+        last_event_order_id = None
+        for order in event_orders:
+            if order_number_now == 0:
+                first_event_order_id = order[0]
+            members_ids = members_ids | set(order[1].get("members",[]))
+            members_ids = members_ids | set(order[1].get("editors",[]))
+            orders_json.append(order)
+            order_number_now = order_number_now + 1
+            last_event_order_id = order[0]
+            if order_number_now >= 50:
+                break
+        members = nomagic._get_entities_by_ids(members_ids)
+        for member in members:
+            members_json[member[0]] = {"name":member[1].get("name","") or member[1].get("mobilephone_china",u"普通用户"),"tel":member[1].get("mobilephone_china","15201950688")}
+
+        self.finish({"orders":orders_json,"members":members_json,"first_event_order_id":first_event_order_id,"last_event_order_id":last_event_order_id})
+
+class HomeEventAddOrderAPIHandler(WebRequest):
+    def get(self):
+        self.post()
+    @tornado.gen.coroutine
+    def post(self):
+        if not self.current_user:
+            return
+        order = {}
+        self.app = "hotpoor"
+        user_id = self.current_user["id"]
+        order_max_price = self.get_argument("order_max_price",0)
+        order["owner"] = user_id
+        order["payment_fee"] = self.get_argument("payment_fee",0)
+        order["payment_status"] = self.get_argument("payment_status","")
+        order["desc"] = self.get_argument("desc","")
+        order["transport"] = self.get_argument("transport","")
+        order["app"] = "hotpoor"
+        order["subtype"] = "event_order"
+        order["subtype_status"] = self.get_argument("subtype_status",u"建立契约中")
+        order["remark"] = [[order["owner"],self.get_argument("remark_text",u"创建了本契约哟"),int(time.time())]]
+        order["editors"] = [user_id]
+        order["members"] = [user_id]
+        order["title"] = self.get_argument("title", u"一个新の契约")
+
+        user = nomagic._get_entity_by_id(user_id)
+        result = nomagic.order.create_order(order)
+        order_id = result[0]
+        user_name = user.get("name",user.get("weixin_data",{}).get(self.app,{}).get("nickname",u"匿名"))
+
+        #推送配送线路人员
+        http_client = tornado.httpclient.AsyncHTTPClient()
+        access_token = weixin_JS_SDK_access_tokens.get(order["app"],"")
+        url = "https://api.weixin.qq.com/cgi-bin/message/template/send?access_token="+access_token
+        remark = u"\n@%s: %s" % (user_name, self.get_argument("remark_text",u"没有留下些什么"))
+
+        # 推送到除了发起者以外的所有人
+        editors = nomagic._get_entities_by_ids(set(order["editors"]))
+        for editor in editors:
+            if editor[1].get("hotpoor_openids",[]):
+                openid = editor[1].get("hotpoor_openids",[])[0]
+            else:
+                openid = ''
+            if access_token and openid:
+                first = u"契约の精神 您正有新的一条加入"
+                keyword1 = order["title"]
+                keyword2 = time.strftime('%Y-%m-%d %H:%M')
+                keyword3 = order["subtype_status"]
+                json = {
+                    "touser":openid,
+                    "template_id":weixin_apps_dev_info.get(order["app"],{}).get("template_id_order_event_create",""),
+                    "url":"http://www.hotpoor.org/home/event/%s" % order_id,
+                    "topcolor":"#dd4b39",
+                    "data":{
+                        "first":{"value":first,"color":"#000000"},
+                        "keyword1":{"value":keyword1,"color":"#dd4b39"},
+                        "keyword2":{"value":keyword2,"color":"#000000"},
+                        "keyword3":{"value":keyword3,"color":"#dd4b39"},
+                        "remark":{"value":remark,"color":"#000000"},
+                    },
+                }
+                body = json_encode(json)
+                request = tornado.httpclient.HTTPRequest(
+                            url = url,
+                            method = "POST",
+                            body = body)
+                response = yield http_client.fetch(request)
+                print response.body
+
+        orders = user.get("event_orders",[])
+        orders.insert(0,result[0])
+        user["event_orders"] = orders
+        nomagic.auth.update_user(user_id,user)
+
+        self.finish({"info":"created"})
         return
+
+class HomeEventUpdateOrderAPIHandler(WebRequest):
+    @tornado.gen.coroutine
+    def get(self):
+        self.finish({})
+
+class HomeEventEditorsListAPIHandler(WebRequest):
+    @tornado.gen.coroutine
+    def get(self):
+        self.finish({})
+
+class HomeEventAddEditorAPIHandler(WebRequest):
+    @tornado.gen.coroutine
+    def get(self):
+        self.finish({})
+
+class HomeEventRemoveEditorAPIHandler(WebRequest):
+    @tornado.gen.coroutine
+    def get(self):
+        self.finish({})
+
+class HomeEventMembersListAPIHandler(WebRequest):
+    @tornado.gen.coroutine
+    def get(self):
+        self.finish({})
+
+class HomeEventAddMemberAPIHandler(WebRequest):
+    @tornado.gen.coroutine
+    def get(self):
+        self.finish({})
+
+class HomeEventRemoveMemberAPIHandler(WebRequest):
+    @tornado.gen.coroutine
+    def get(self):
+        self.finish({})
+
 class HomeEventBaseHandler(WebRequest):
     @tornado.gen.coroutine
     def get(self,entity_id):
@@ -635,9 +806,7 @@ class HomeEventBaseHandler(WebRequest):
         self.weixin_code = ''
         self.access_token = ''
         self.openid = ''
-        app = self.get_argument("app","hotpoor")
-        if not app in weixin_apps:
-            app = "hotpoor"
+        app = "hotpoor"
         self.app = app
 
         self.wx_appid = ''
@@ -645,13 +814,16 @@ class HomeEventBaseHandler(WebRequest):
         self.wx_noncestr = ''
         self.wx_signature = ''
 
+        print self.user_id
+        print self.aim_id
+        print "========="
         if self.aim_id == self.user_id:
             self.aim = self.user
         else:
             self.aim = nomagic._get_entity_by_id(self.aim_id)
         self.aim_type = "error"
         if not self.aim:
-            self.render("template/hotpoor_home_event_error.html")
+            self.redirect('/home/event')
             return
         else:
             self.aim_type = self.aim.get("type","error")
@@ -746,6 +918,20 @@ class HomeEventBaseHandler(WebRequest):
             self.device_type = "Desktop"
             # self.render("template/hotpoor_home_map_desktop.html")
             self.render("template/hotpoor_home_event_ios.html")
+        return
+
+class HomeEventHandler(WebRequest):
+    @tornado.gen.coroutine
+    def get(self):
+        if not self.current_user:
+            self.render("template/hotpoor_home_event_start.html")
+            return
+        user_id = self.current_user["id"]
+        order_id = self.get_argument("order_id",None)
+        if order_id:
+            self.redirect("/home/event/%s" % order_id)
+        else:
+            self.redirect("/home/event/%s" % user_id)
         return
 
 settings = {
