@@ -450,6 +450,168 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
     def on_close(self):
         WebSocketHandler.clients.remove(self)
         WebSocketHandler.send_to_all(str(id(self)) + 'has left')
+class UserLogoutAPIHandler(WebRequest):
+    def get(self):
+        self.post()
+    def post(self):
+        self.clear_cookie("user")
+        self.finish({"hotpoor":"logout"})
+
+class LogoutAPIHandler(WebRequest):
+    def get(self):
+        self.clear_cookie("user")
+        self.redirect("/")
+
+class SMSYunpianSendAPIHandler(WebRequest):
+    def get(self):
+        self.post()
+    @tornado.gen.coroutine
+    def post(self):
+    	self.finish({"error":"no work"})
+
+class UserSetHeadImgUrlAPIHandler(WebRequest):
+    def get(self):
+        if not self.current_user:
+            return
+        self.finish({"":""})
+        return
+
+class UserInfoAPIHandler(WebRequest):
+    def get(self):
+        self.post()
+    def post(self):
+        if not self.current_user:
+            return
+        mobilephone = self.get_argument("mobilephone","")
+        country = self.get_argument("country","")
+        login = "mobile:+%s%s" % (country,mobilephone)
+        result = conn.query("SELECT * FROM index_login WHERE login = %s ORDER BY id ASC", login)
+        user_id = ""
+        if not result:
+            self.finish({"error":"no user"})
+            return
+        else:
+            user_id = result[0].get("entity_id","")
+            user = nomagic._get_entity_by_id(user_id)
+            self.finish({"id":user_id,"name":user.get("name",u"姓名未填写")})
+            return
+
+class UserCheckAPIHandler(tornado.web.RequestHandler):
+    def get(self):
+        self.post()
+    def post(self):
+        app = self.get_argument("app","")
+        mobilephone = self.get_argument("mobilephone","")
+        name = self.get_argument("name","")
+        country = self.get_argument("country","")
+        mobilephone_code = self.get_argument("mobilephone_code","")
+        if not app:
+            return
+        if app in ["bangfer","wlstation","lovebangfer","hotpoor"]:
+            login = "mobile:+%s%s" % (country,mobilephone)
+            result = conn.query("SELECT * FROM index_login WHERE login = %s ORDER BY id ASC", login)
+            user_id = ""
+            if not result:
+                user = {}
+                user["mobilephone_china"] = mobilephone
+                user["mobilephone_code"] = "".join(random.choice(string.digits) for x in range(4))
+                user["mobilephone_code_close"] = "true"
+                user["password"] = ""
+                user["name"] = name
+                result = nomagic.auth.create_user(user)
+                if result:
+                    new_id = result[0]
+                    conn.execute("INSERT INTO index_login (login, entity_id,app) VALUES(%s, %s, %s)", login, new_id,app)
+                    self.set_secure_cookie("user", tornado.escape.json_encode({"id": new_id, "v":1}),expires=time.time()+63072000)
+                    self.finish({"info":"reload"})
+                    return
+                else:
+                    return
+            else:
+                user_id = result[0].get("entity_id","")
+                user = nomagic._get_entity_by_id(user_id)
+                if user.get("mobilephone_code_close","true") == "true":
+                    self.set_secure_cookie("user", tornado.escape.json_encode({"id": user_id, "v":1}),expires=time.time()+63072000)
+                    self.finish({"info":"reload"})
+                    return
+                else:
+                    # ==== 助通短信 ====
+                    if mobilephone_code:
+                        sms_content = u"【HOTPOOR序】您的访问码是：%s，如非本人操作，请勿略本短信。" % user["mobilephone_code"]
+                        sms_dstime = ''                          #为空代表立即发送  如果加了时间代表定时发送  精确到秒
+                        sms_mobile = mobilephone
+                        sms_username = "hotpoor"                 #短信帐号用户名
+                        sms_password = "Shelly911223"            #短信帐号密码
+                        sms_productid = "676766"                 #内容 676766
+                        sms_xh = ''                              #留空
+
+                        sms_url="http://www.ztsms.cn:8800/sendSms.do?username=%s&password=%s&mobile=%s&content=%s&dstime=%s&productid=%s&xh=%s" % (sms_username, sms_password, sms_mobile, urllib.quote(sms_content.encode("utf8")), sms_dstime,sms_productid,sms_xh)
+                        client = tornado.httpclient.AsyncHTTPClient()
+                        client.fetch(sms_url)
+                        self.finish({"info":"waiting code"})
+                        return
+                    else:
+                        if mobilephone_code == user["mobilephone_code"]:
+                            self.set_secure_cookie("user", tornado.escape.json_encode({"id": user_id, "v":1}),expires=time.time()+63072000)
+                            self.finish({"info":"reload"})
+                            return
+                        else:
+                            self.finish({"info":"code error"})
+                            return
+        else:
+            return
+
+class MainHandler(WebRequest):
+    @tornado.gen.coroutine
+    def get(self,app):
+        self.finish({"info": "welcome"})
+
+class WeixinDownloadHotpoorAPIHandler(WebRequest):
+    @tornado.gen.coroutine
+    def get(self):
+        access_token = self.get_argument("access_token","")
+        media_id = self.get_argument("media_id","")
+        if not access_token or not media_id:
+            self.finish({"info":"not right"})
+            return
+        print access_token
+        print media_id
+        url = "http://file.api.weixin.qq.com/cgi-bin/media/get?access_token=%s&media_id=%s" % (access_token, media_id)
+        print url
+        filename = os.path.join("static/test",media_id)
+        print filename
+        urllib.urlretrieve(url,filename,Schedule)
+        print "finish"
+        q = qiniu.auth.Auth(qiniu_hotpoor_access_key,qiniu_hotpoor_secret_key)
+        bucket_name = 'hotpoor'
+        key = 'hotpoor_weixin_amr_%s' % int(time.time())
+        saveas_key = base64.b64encode("hotpoor:%s"%key)
+        fops = 'avthumb/m4a|saveas/'+ saveas_key
+        policy = {
+            'persistentOps':fops
+        }
+        token = q.upload_token(bucket_name, key, 3600, policy)
+        localfile = filename
+
+        ret, info = put_file(token, key, localfile)
+        print info
+        assert ret['key'] == key
+        assert ret['hash'] == etag(localfile)
+        os.remove(filename)
+        print "--------"
+        print "| done |"
+        print "--------"
+
+def Schedule(a,b,c):
+    '''''
+    a:已经下载的数据块
+    b:数据块的大小
+    c:远程文件的大小
+    '''
+    per = 100.0 * a * b / c
+    if per > 100 :
+        per = 100
+    print '%.2f%%' % per
 
 
 settings = {
@@ -487,11 +649,6 @@ application = tornado.web.Application([
     #==========================
     (r"/home/tools/webgl_panorama_dualfisheye", HomeToolsWebglPanoramaDualfisheyeHandler),
     (r"/home/tools/webgl_video_panorama_equirectangular", HomeToolsWebglVideoPanoramaEquirectangularHandler),
-
-    #==========================
-    #/home/*产品系列 所有其他产品在这个上面得
-    #==========================
-    (r"/home/(.*)", HomeHandler),
 
     #==========================
     #/api/*产品系列
