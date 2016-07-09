@@ -6,7 +6,7 @@
     <meta name="format-detection" content="telephone=no"/>
     <script src="/static/js/jquery-1.11.3.min.js"></script>
     <script src="/static/js/jweixin-1.0.0.js"></script>
-    <link rel="stylesheet" type="text/css" href="/static/css/hotpoor_home_event.css?v=1.0">
+    <link rel="stylesheet" type="text/css" href="/static/css/hotpoor_home_event.css?v=1.3">
     <style type="text/css">
     body{
         overflow-y: auto;
@@ -117,12 +117,38 @@
         height: auto;
         background-color: white;
         border-radius: 4px;
-        box-shadow: 0px 4px 2px rgba(0,0,0,0.26), 0px 2px 1px rgba(0,0,0,0.26);
+        box-shadow: 0px 2px 4px rgba(0,0,0,0.26), 0px 1px 2px rgba(0,0,0,0.26);
+    }
+    #event_add{
+        position: fixed;
+        bottom: 16px;
+        width: 200px;
+        left: calc( 50% - 100px );
+        left: -webkit-calc( 50% - 100px );
+        left: -moz-calc( 50% - 100px );
+        left: -ms-calc( 50% - 100px );
+        left: -o-calc( 50% - 100px );
+        height: 36px;
+        border-radius: 6px;
+        background-color: rgba(0,0,0,0.8);
+        color: white;
+        line-height: 36px;
+        font-size: 14px;
+        text-align: center;
+        box-shadow: 0px 2px 4px rgba(0,0,0,0.16), 0px 1px 2px rgba(0,0,0,0.16);
+        cursor: pointer;
     }
     </style>
 </head>
 <body>
-    <div id="wx_share_area" class="cover_area" style="display:block;">
+    <div id="event_base_area">
+        <div id="event_order_list_new" style="display:none;">点击加载最新</div>
+        <div id="event_order_list">order列表</div>
+        <div id="event_order_list_old" style="display:none;">点击加载往昔</div>
+    </div>
+
+    <div id="event_add" class="event_base_btns" style="display:none;">创建一个新契约</div>
+    <div id="wx_share_area" class="cover_area" style="display:none;">
         <div id="ws_share_area_card_base" class="cover_area_card_base">
             <div class="cover_area_card">
                 <div>
@@ -142,10 +168,141 @@
 <script type="text/javascript">
     var USER_ID = "{{ handler.user_id }}";
     var AIM_ID = "{{ handler.aim_id }}";
+    var AIM_TYPE = "{{ handler.aim_type }}";
     var APP = "{{ handler.app }}";
 </script>
 <script type="text/javascript">
-    
+    event_add_net = false;
+    $("#event_add").on("click",function(evt){
+        if(!event_add_net){
+            event_add_net = true;
+            $.ajax({
+                "type":"POST",
+                "url":"/home/event/api/add_order",
+                "dataType":"json",
+                "data":{
+                    "title":$("#event_title").val()
+                },
+                "success":function(data){
+                    console.log(data);
+                    event_add_net = false;
+                    event_order_list_load();
+                },
+                "error":function(data){
+                    event_add_net = false;
+                }
+            });
+        }
+    });
+    event_order_list_net =false;
+    first_event_order_id = null;
+    last_event_order_id = null;
+    function event_order_list_load(){
+        $("#event_order_list").empty();
+        if(!event_order_list_net){
+            event_order_list_net = true;
+            $.ajax({
+                "type":"POST",
+                "url":"/home/event/api/order_list",
+                "dataType":"json",
+                "data":{},
+                "success":function(data){
+                    console.log(data);
+                    event_order_list_net = false;
+                    first_event_order_id = data.first_event_order_id
+                    last_event_order_id = data.last_event_order_id
+                    for (i in data.orders){
+                        order_line = order_to_element(data.orders[i]);
+                        $("#event_order_list").append(order_line);
+                    }
+                },
+                "error":function(data){
+                    event_order_list_net = false;
+                }
+            });
+        }
+    }
+    if (AIM_TYPE == "user" && USER_ID == AIM_ID){
+        event_order_list_load();
+        $("#event_add").show();
+    }
+    function event_order_list_load_new(){
+        if(!event_order_list_net){
+            event_order_list_net = true;
+            $.ajax({
+                "type":"POST",
+                "url":"/home/event/api/order_list_new",
+                "dataType":"json",
+                "data":{
+                    "first_event_order_id": first_event_order_id
+                },
+                "success":function(data){
+                    console.log(data);
+                    event_order_list_net = false;
+                    first_event_order_id = data.first_event_order_id
+                },
+                "error":function(data){
+                    event_order_list_net = false;
+                }
+            });
+        }
+    }
+    function event_order_list_load_old(){
+        if(!event_order_list_net){
+            event_order_list_net = true;
+            $.ajax({
+                "type":"POST",
+                "url":"/home/event/api/order_list_old",
+                "dataType":"json",
+                "data":{
+                    "last_event_order_id": last_event_order_id
+                },
+                "success":function(data){
+                    console.log(data);
+                    event_order_list_net = false;
+                    last_event_order_id = data.last_event_order_id
+                },
+                "error":function(data){
+                    event_order_list_net = false;
+                }
+            });
+        }   
+    }
+    $("#event_order_list_new").on("click",function(evt){
+        event_order_list_load_new();
+    });
+    $("#event_order_list_old").on("click",function(evt){
+        event_order_list_load_old(); 
+    });
+
+    function order_to_element (order){
+        var _id, _data, _html, _headers, _head_class, _headers_html;
+        _id = order[0];
+        _data = order[1];
+        _editors = _data["editors"];
+        _members = _data["members"];
+        _headers = [];
+        if (_members.length >= 9){
+            _headers = _members.slice(0, 9);
+        }else{
+            _headers = _members;
+        }
+        if (_headers.length <= 1) {
+            _head_class = "qrcode_head_1";
+        else if (_headers.length > 4) {
+            _head_class = "qrcode_head_9";
+        } else {
+            _head_class = "qrcode_head_4";
+        }
+        _headers_html = "<div class=\"qrcode_head "+_head_class+"\"><img src='#{i}'></div>";
+
+        
+        _html = "<div class=\"event_order_line\" data-id=\""+_id+"\" align=\"center\">"
+                +"<div class=\"event_order_line_title\">"+_data["title"]+"</div>"
+                +"<div class=\"event_order_line_bottom\"></div>"
+        +"</div>";
+        return _html;
+    }
 </script>
 {% if handler.openid %}
 <script type="text/javascript">
@@ -212,7 +369,7 @@
                 // alert("fail");
             }
         });
-        
+
         wx.onMenuShareTimeline({
             title: '我们在EVENT承诺了，在家一样学得棒棒哒，激励起孩子快乐学习的新契约！', // 分享标题
             link: 'http://www.hotpoor.org/home/event/'+AIM_ID, // 分享链接
@@ -241,16 +398,16 @@
                 imgUrl: '{{ handler.user_headimgurl }}', // 分享图标
                 type: '', // 分享类型,music、video或link，不填默认为link
                 dataUrl: '', // 如果type是music或video，则要提供数据链接，默认为空
-                success: function () { 
+                success: function () {
                     // 用户确认分享后执行的回调函数
                     // alert("success");
                 },
-                cancel: function () { 
+                cancel: function () {
                     // 用户取消分享后执行的回调函数
                     // alert("fail");
                 }
             });
-            
+
             wx.onMenuShareTimeline({
                 title: $("#wx_share_area_timeline_title").val(), // 分享标题
                 link: 'http://www.hotpoor.org/home/event/'+AIM_ID, // 分享链接
