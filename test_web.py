@@ -149,7 +149,7 @@ class WechatWebpayHandler(WebRequest):
                 self.user_id = self.current_user['id']
                 #获取open_id
                 self.openid = openid
-                
+
                 if self.openid:
                     order = nomagic._get_entity_by_id(order_id)
                     if not order:
@@ -314,7 +314,7 @@ class WechatWebpayTestHandler(WebRequest):
                 self.user_id = self.current_user['id']
                 #获取open_id
                 self.openid = openid
-                
+
                 if self.openid:
                     order = nomagic._get_entity_by_id(order_id)
                     if not order:
