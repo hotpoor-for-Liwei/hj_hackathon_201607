@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>序·契约の精神 | Home Event</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="format-detection" content="telephone=no"/>
+    <script src="/static/js/jquery-1.11.3.min.js"></script>
+    <script src="/static/js/jweixin-1.0.0.js"></script>
+    <style type="text/css">
+        * {
+            outline: 0px solid transparent;
+            -webkit-tap-highlight-color: rgba(0,0,0,0);
+            -webkit-touch-callout: none;
+        }
+        body{
+            font-family: "Helvetica Neue","Hiragino Sans GB","Microsoft YaHei","\9ED1\4F53",Arial,sans-serif;
+            margin: 0;
+            padding: 0;
+            background: rgba(240,240,240,1);
+        }
+        #mobilephone_start{
+            margin-top: 30px;
+            margin-bottom: 10px;
+            color: white;
+            width: 236px;
+            height: 36px;
+            line-height: 36px;
+            font-size: 14px;
+            border-radius: 2px;
+            cursor: pointer;
+            background: rgba(0,0,0,0.8);
+        }
+        .start_input{
+            width: 220px;
+            background: #f5f5f5;
+            border: 0;
+            height: 28px;
+            padding: 4px 8px;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+<div align="center">
+    <div style="width:50%;min-width:300px;background:white;margin-top:30px;padding-top:30px;padding-bottom:2%;border-radius:2px;">
+        <div style="margin-top:30px;margin-bottom:60px;">
+            <img src="/static/img/event_logo.png" style="width:120px;height:120px;">
+        </div>
+        <div style="width:236px;margin-bottom:10px;">
+            <div style="text-align:left;margin-bottom:5px;color:#a7a7a7;margin-left:4px;font-size:16px;"><span>中国大陆 +86</span></div>
+            <div><input id="mobilephone" type="tel" class="start_input" placeholder="手机号·Mobile"></div>
+        </div>
+        <div style="width:236px;margin-bottom:10px;display:none;">
+            <div style="text-align:left;margin-bottom:5px;color:#a7a7a7;margin-left:4px;font-size:16px;"><span>code</span> <span style="font-size:10px;">默认关闭·可通过设置开启</span></div><div>
+            <input id="mobilephone_code" type="password" class="start_input" placeholder="验证码·Code" readonly="readonly"></div>
+        </div>
+        <div style="display:none;">
+            <div id="info" style="opacity:0;visibility:0;font-size:14px;">备注信息</div>
+        </div>
+        <div style="padding-bottom:20px;">
+            <div id="mobilephone_start">开始访问</div>
+        </div>
+    </div>
+    <div style="color: #a7a7a7;font-size: 12px;margin-top: 5px;">
+        Hotpoor序
+    </div>
+    <div id="alert_info_btn" style="color: #a7a7a7;font-size: 10px;margin-top: 20px;">
+        用户条款
+    </div>
+    <div id="alert_info" align="center" style="display:none;margin-top:10px;padding-left:5%;padding-right:5%;">
+<br>Hotpoor序产品用户协议
+<br>（以下简称为"Hotpoor序"）
+<br>访问者在接受Hotpoor序产品服务之前，请务必仔细阅读本条款并同意本声明。访问者访问本产品的行为以及通过各类方式利用本产品的行为，都将被视作是对本声明全部内容的无异议的认可;如有异议，请立即跟本产品协商，并取得本产品的书面同意意见。
+<br>
+<br>第一条访问者在从事与产品相关的所有行为(包括但不限于访问浏览、利用、转载、宣传介绍)时，必须以善意且谨慎的态度行事;访问者不得故意或者过失的损害或者弱化"Hotpoor序"的各类合法权利与利益，不得利用<br>"Hotpoor序"以任何方式直接或者间接的从事违反中国法律、国际公约以及社会公德的行为，且访问者应当恪守下述承诺：
+<br>1、传输和利用信息符合中国法律、国际公约的规定、符合公序良俗;
+<br>2、不将"Hotpoor序"以及与之相关的网络服务用作非法用途以及非正当用途;
+<br>3、不干扰和扰乱"Hotpoor序"以及与之相关的网络服务;
+<br>4、不得利用"Hotpoor序"旗下任何产品以任何形式发布、转载或传播任何违法，违禁，色情暴力等内容，否则"Hotpoor序"将采取一切法律手段追究责任;
+<br>5、Hotpoor序产品是一款预约制协作类工具，旨在提高用户的时间效率，任何利用Hotpoor序产品进行公开性质的传播活动，不得违反中国法律，传播形式不得违反中国及当地法律法规，"Hotpoor序"不承担任何形式的结果和<br>责任。用户不得以任何形式做出诋毁或有损"Hotpoor序"旗下产品和品牌名誉的行为，否则"Hotpoor序"将追究其法律责任。
+<br>6、遵守与"Hotpoor序"以及与之相关的网络服务的协议、规定、程序和惯例等。
+<br>
+<br>第二条"Hotpoor序"内容仅代表使用者本人的观点，不代表"Hotpoor序"的观点和看法，与"Hotpoor序"立场无关，相关责任作者自负。
+<br>
+<br>第三条.用户不得擅自更改，发布未经授权的内容，不得使用"Hotpoor序"发布任何有损社会道德、对社会引起不良影响、涉及色情暴力低俗、对青少年成长影响不良的任何形式的内容，"Hotpoor序"有权审核和阅读此类内<br>容，并有权经审核和阅读后将所认为的违反国家法律法规、违反社会公共道德、对社会造成不良影响、涉及色情暴力低俗、对青少年成长影响不利和不良影响的内容进行删除、对发布者进行封号处理并追求其法律责<br>任。
+<br>
+<br>第四条"Hotpoor序"所呈现的各类形式(包括但不仅限于文字、图片、图表)信息仅供参考使用，并不代表"Hotpoor序"同意其说法或描述，仅为提供更多信息，也不构成任何投资建议。对于访问者根据"Hotpoor序"提供的信息<br>所做出的一切行为，除非另有明确的书面承诺文件，否则"Hotpoor序"不承担任何形式的责任。
+<br>
+<br>第五条当"Hotpoor序"以外链接形式推荐其他产品内容时，"Hotpoor序"并不对这些产品或资源的可用性负责，且不保证从这些产品获取的任何内容、产品、服务或其他材料的真实性、合法性，对于任何因使用或信赖从此<br>类产品或资源上获取的内容、产品、服务或其他材料而造成(或声称造成)的任何直接或间接损失，"Hotpoor序"均不承担任何责任。
+<br>
+<br>第六条访问者在"Hotpoor序"注册时提供的一些个人资料，"Hotpoor序"除您本人同意及第十条规定外不会将用户的任何资料以任何方式泄露给任何一方。
+<br>
+<br>第七条当政府部门、司法机关等依照法定程序要求"Hotpoor序"披露个人资料时，"Hotpoor序"将根据执法单位之要求或为公共安全之目的提供个人资料。在此情况下之任何披露，"Hotpoor序"均得免责。
+<br>
+<br>第八条由于用户在使用中产生的恶意提交影响平台正常使用，“Hotpoor序”有权视为恶意妨碍，并采取相应措施制止其行为，进行警告，处理，直至封号和起诉。所产生的损失由该用户自行负责和承担。
+    </div>
+</div>
+</body>
+</html>
+<script type="text/javascript">
+    $("#alert_info_btn").on("click",function(){
+        if($("#alert_info").css("display")=="none"){
+            $("#alert_info").css("display","block");
+        }else{
+            $("#alert_info").css("display","none");
+        }
+    });
+    hide_info_interval = null;
+    $("body").on("click","#mobilephone_start",function(){
+        if ($("#mobilephone").val().length==11){
+            $.ajax({
+                "type":"POST",
+                "url":"/api/user/check",
+                "dataType":"json",
+                "data":{
+                    "mobilephone":$("#mobilephone").val(),
+                    "country":"86",
+                    "app":"hotpoor",
+                    "mobilephone_code":$("#mobilephone_code").val(),
+                },
+                "success":function(data){
+                    if (data.info=="reload") {
+                        if (window.location.href.indexOf("?")>=0){
+                            window.location.href = window.location.href + "&v="+parseInt(Math.random()*1000);
+                        }else{
+                            window.location.reload();
+                        }
+                    }else if(data.info=="code error"){
+                        hide_info_timeout_set("验证码错误");
+                    }else if(data.info=="waiting code"){
+                        hide_info_timeout_set("验证码已发送");
+                    }
+                },
+                "error":function(data){
+                    hide_info_timeout_set("当前网络不可用");
+                }
+            });
+        }else{
+            hide_info_timeout_set("请输入正确手机号");
+        }
+    });
+    function hide_info_timeout_set (node) {
+        $("#info").text(node);
+        $("#info").css({
+            "opacity":1,
+            "visibility":1,
+        });
+        clearTimeout(hide_info_timeout);
+        hide_info_timeout = setTimeout(function(){
+            $("#info").css({
+                "opacity":0,
+                "visibility":0,
+            }); 
+        },1000);
+    }
+</script>

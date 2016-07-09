@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<head>
+    <title>{{ handler.title }}</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="format-detection" content="telephone=no"/>
+    <script src="/static/js/jquery-1.11.3.min.js"></script>
+    <script src="/static/js/jweixin-1.0.0.js"></script>
+    <link rel="stylesheet" type="text/css" href="/static/css/hotpoor_home_event.css?v=1.0">
+    <style type="text/css">
+    body{
+        overflow-y: auto;
+        height: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    #container{
+        height: 100%;
+    }
+    #aim_background_image{
+        position: fixed;
+        top: 0px;
+        left: 0px;
+        width: 100%;
+        height: 100%;
+        background-color: red;
+        display: none;
+    }
+    .head{
+    background-image:url({{ handler.user_headimgurl }});
+    width:50px;
+    height:50px;
+    background-size:cover;
+    border-radius:25px;
+    box-shadow:0px 0px 0px 2px white, 0px 0px 3px 1px black;
+    z-index:2;
+    }
+    .head:before{
+    position: absolute;
+    content: "";
+    width: 0;
+    height: 0;
+    border: solid transparent;
+    top: 47px;
+    left: 25px;
+    border-width: 10px;
+    border-top-color: rgba(0,0,0,0.12);
+    margin-left: -10px;
+    transform: scaleX(0.6) scaleY(0.6);
+    -webkit-transform: scaleX(0.6) scaleY(0.6);
+    z-index:1;
+    }
+    .head:after{
+    position: absolute;
+    content: "";
+    width: 0;
+    height: 0;
+    border: solid transparent;
+    top: 48px;
+    left: 27px;
+    border-width: 8px;
+    border-top-color: white;
+    margin-left: -10px;
+    transform: scaleX(0.6) scaleY(0.65);
+    -webkit-transform: scaleX(0.6) scaleY(0.65);
+    z-index:3;
+    }
+    #alert_area{
+        width: 120px;
+        height: 36px;
+        line-height: 36px;
+        text-align: center;
+        font-size: 16px;
+        position: fixed;
+        left: calc( 50% - 60px );
+        left: -webkit-calc( 50% - 60px );
+        left: -moz-calc( 50% - 60px );
+        left: -ms-calc( 50% - 60px );
+        left: -o-calc( 50% - 60px );
+        bottom: 30px;
+        color: white;
+        background-color:rgba(0,0,0,0.8);
+        border-radius: 4px;
+    }
+    .cover_area{
+        position: fixed;
+        top: 0px;
+        left: 0px;
+        width: 100%;
+        height: 100%;
+        -webkit-overflow-scrolling: touch;
+        overflow-y: auto;
+        background-color: rgba(0,0,0,0.8);
+    }
+    .cover_area_card_base{
+        display: -webkit-box;
+        -webkit-box-align: center;
+        -webkit-box-pack: center;
+
+        display: -webkit-box-flex;
+        -webkit-flex-pack: center;
+        -webkit-flex-align: center;
+
+        justify-content:center;
+        align-items:center;
+        -webkit-align-items:center;
+        display:-webkit-flex;
+        width: 100%;
+        min-height: 100%;
+    }
+    .cover_area_card{
+        margin-top: 20px;
+        margin-bottom: 20px;
+        min-width: 280px;
+        width: 90%;
+        max-width: 500px;
+        min-height: 200px;
+        height: auto;
+        background-color: white;
+        border-radius: 4px;
+        box-shadow: 0px 4px 2px rgba(0,0,0,0.26), 0px 2px 1px rgba(0,0,0,0.26);
+    }
+    </style>
+</head>
+<body>
+    <div id="wx_share_area" class="cover_area" style="display:block;">
+        <div id="ws_share_area_card_base" class="cover_area_card_base">
+            <div class="cover_area_card">
+                <div>
+                    <input id="wx_share_area_title"><button id="wx_share_area_title_save">save</button>
+                </div>
+                <div>
+                    <textarea id="wx_share_area_desc"></textarea><button id="wx_share_area_desc_save">save</button>
+                </div>
+                <div>
+                    <input id="wx_share_area_timeline_title"><button id="wx_share_area_timeline_title_save">save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+<script type="text/javascript">
+    var USER_ID = "{{ handler.user_id }}";
+    var AIM_ID = "{{ handler.aim_id }}";
+    var APP = "{{ handler.app }}";
+</script>
+<script type="text/javascript">
+    
+</script>
+{% if handler.openid %}
+<script type="text/javascript">
+    //微信JSSDK
+    wx.config({
+        debug: false,
+        appId: '{{ handler.wx_appid }}',
+        timestamp: {{ handler.wx_timestamp }},
+        nonceStr: '{{ handler.wx_noncestr }}',
+        signature: '{{ handler.wx_signature }}',
+        jsApiList: [
+            'checkJsApi',
+            'onMenuShareTimeline',
+            'onMenuShareAppMessage',
+            'onMenuShareQQ',
+            'onMenuShareWeibo',
+            'hideMenuItems',
+            'showMenuItems',
+            'hideAllNonBaseMenuItem',
+            'showAllNonBaseMenuItem',
+            'translateVoice',
+            'startRecord',
+            'stopRecord',
+            'onRecordEnd',
+            'playVoice',
+            'pauseVoice',
+            'stopVoice',
+            'uploadVoice',
+            'downloadVoice',
+            'chooseImage',
+            'previewImage',
+            'uploadImage',
+            'downloadImage',
+            'getNetworkType',
+            'openLocation',
+            'getLocation',
+            'hideOptionMenu',
+            'showOptionMenu',
+            'closeWindow',
+            'scanQRCode',
+            'chooseWXPay',
+            'openProductSpecificView',
+            'addCard',
+            'chooseCard',
+            'openCard'
+        ],
+    });
+    wx.ready(function(){
+        // wx.hideAllNonBaseMenuItem();
+        wx.showAllNonBaseMenuItem();
+        wx.onMenuShareAppMessage({
+            title: '说到做到，我们在EVENT承诺了！', // 分享标题
+            desc: '在家一样学得棒棒哒，激励起孩子学习的快乐，作为家长与孩子立契约！', // 分享描述
+            link: 'http://www.hotpoor.org/home/event/'+AIM_ID, // 分享链接
+            imgUrl: '{{ handler.user_headimgurl }}', // 分享图标
+            type: '', // 分享类型,music、video或link，不填默认为link
+            dataUrl: '', // 如果type是music或video，则要提供数据链接，默认为空
+            success: function () { 
+                // 用户确认分享后执行的回调函数
+                // alert("success");
+            },
+            cancel: function () { 
+                // 用户取消分享后执行的回调函数
+                // alert("fail");
+            }
+        });
+        
+        wx.onMenuShareTimeline({
+            title: '我们在EVENT承诺了，在家一样学得棒棒哒，激励起孩子快乐学习的新契约！', // 分享标题
+            link: 'http://www.hotpoor.org/home/event/'+AIM_ID, // 分享链接
+            imgUrl: '{{ handler.user_headimgurl }}', // 分享图标
+            success: function () { 
+                // 用户确认分享后执行的回调函数
+            },
+            cancel: function () { 
+                // 用户取消分享后执行的回调函数
+            }
+        });
+        wx.getNetworkType({
+            success: function (res) {
+                var networkType = res.networkType; // 返回网络类型2g，3g，4g，wifi
+                console.log(networkType);
+            }
+        });
+    });
+    function wx_ready_update() {
+        wx.ready(function(){
+            wx.showAllNonBaseMenuItem();
+            wx.onMenuShareAppMessage({
+                title: $("#wx_share_area_title").val(), // 分享标题
+                desc: $("#wx_share_area_desc").val(), // 分享描述
+                link: 'http://www.hotpoor.org/home/event/'+AIM_ID, // 分享链接
+                imgUrl: '{{ handler.user_headimgurl }}', // 分享图标
+                type: '', // 分享类型,music、video或link，不填默认为link
+                dataUrl: '', // 如果type是music或video，则要提供数据链接，默认为空
+                success: function () { 
+                    // 用户确认分享后执行的回调函数
+                    // alert("success");
+                },
+                cancel: function () { 
+                    // 用户取消分享后执行的回调函数
+                    // alert("fail");
+                }
+            });
+            
+            wx.onMenuShareTimeline({
+                title: $("#wx_share_area_timeline_title").val(), // 分享标题
+                link: 'http://www.hotpoor.org/home/event/'+AIM_ID, // 分享链接
+                imgUrl: '{{ handler.user_headimgurl }}', // 分享图标
+                success: function () { 
+                    // 用户确认分享后执行的回调函数
+                },
+                cancel: function () { 
+                    // 用户取消分享后执行的回调函数
+                }
+            });
+            wx.getNetworkType({
+                success: function (res) {
+                    var networkType = res.networkType; // 返回网络类型2g，3g，4g，wifi
+                    console.log(networkType);
+                }
+            });
+        });
+    }
+</script>
+{% end if %}

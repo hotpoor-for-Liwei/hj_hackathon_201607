@@ -613,6 +613,140 @@ def Schedule(a,b,c):
         per = 100
     print '%.2f%%' % per
 
+class HomeEventHandler(WebRequest):
+    @tornado.gen.coroutine
+    def get(self):
+        if not self.current_user:
+            self.render("template/hotpoor_home_event_start.html")
+            return
+        user_id = self.current_user["id"]
+        self.redirect("/home/event/%s"%user_id)
+        return
+class HomeEventBaseHandler(WebRequest):
+    @tornado.gen.coroutine
+    def get(self,entity_id):
+        if not self.current_user:
+            self.render("template/hotpoor_home_event_start.html")
+            return
+        user_agent = self.request.headers.get("User-Agent", "")
+        self.aim_id = entity_id
+        self.user_id = self.current_user["id"]
+        self.user = nomagic._get_entity_by_id(self.user_id)
+        self.weixin_code = ''
+        self.access_token = ''
+        self.openid = ''
+        app = self.get_argument("app","hotpoor")
+        if not app in weixin_apps:
+            app = "hotpoor"
+        self.app = app
+
+        self.wx_appid = ''
+        self.wx_timestamp = ''
+        self.wx_noncestr = ''
+        self.wx_signature = ''
+
+        if self.aim_id == self.user_id:
+            self.aim = self.user
+        else:
+            self.aim = nomagic._get_entity_by_id(self.aim_id)
+        self.aim_type = "error"
+        if not self.aim:
+            self.render("template/hotpoor_home_event_error.html")
+            return
+        else:
+            self.aim_type = self.aim.get("type","error")
+            if not self.aim_type in ["user", "order", "station", "doc", "excel", "ppt", "group"]:
+                self.render("template/hotpoor_home_event_error.html")
+                return
+        weixin_app = self.app
+        if weixin_app in weixin_apps:
+            #获取JSSDK
+            if (int(time.time()) - weixin_JS_SDK_access_token_timers.get(weixin_app,0)) > 3600:
+                weixin_JS_SDK_access_token_timers[weixin_app] = int(time.time())
+                http_client = tornado.httpclient.AsyncHTTPClient()
+                url = "https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid="+weixin_apps_dev_info.get(weixin_app, "").get("AppId","")+"&secret="+weixin_apps_dev_info.get(weixin_app, "").get("AppSecret","")
+                response = yield http_client.fetch(url)
+                data = tornado.escape.json_decode(response.body)
+                weixin_JS_SDK_access_tokens[weixin_app] = data.get('access_token')
+                url = "https://api.weixin.qq.com/cgi-bin/ticket/getticket?access_token="+weixin_JS_SDK_access_tokens[weixin_app]+"&type=jsapi"
+                response = yield http_client.fetch(url)
+                data = tornado.escape.json_decode(response.body)
+                weixin_JS_SDK_jsapi_tickets[weixin_app] = data.get('ticket')
+
+            # print "====== bangfer"
+            # print weixin_JS_SDK_access_tokens
+            sign = WeixinJSSDKSign(weixin_JS_SDK_jsapi_tickets[weixin_app], weixin_JS_SDK_access_token_timers[weixin_app], self.request.full_url())
+            self.wx_app = weixin_app
+            self.wx_appid = weixin_apps_dev_info[weixin_app].get("AppId","")
+            self.wx_ret = sign.sign()
+            self.wx_timestamp = self.wx_ret['timestamp']
+            self.wx_noncestr = self.wx_ret['nonceStr']
+            self.wx_signature = self.wx_ret['signature']
+
+        if "Mobile" in user_agent and "MicroMessenger" in user_agent:
+            if app in weixin_apps:
+                #获取当前用户open_id
+                code = self.get_argument('code','')
+                if code:
+                    self.weixin_code = code
+                    http_client = tornado.httpclient.AsyncHTTPClient()
+                    url = 'https://api.weixin.qq.com/sns/oauth2/access_token?appid='+weixin_apps_dev_info[app].get("AppId","")+'&secret='+weixin_apps_dev_info[app].get("AppSecret","")+'&code='+code+'&grant_type=authorization_code'
+                    response = yield http_client.fetch(url)
+                    data = tornado.escape.json_decode(response.body)
+                    if data.get('errcode','') == 40029:
+                        if entity_id:
+                            self.redirect('/home/event/%s?app=%s'%(entity_id, app))
+                        else:
+                            self.redirect('/home/event?app=%s'%app)
+                        return
+                    self.access_token = data.get('access_token')
+                    self.openid = data.get('openid')
+
+                    args = {
+                        'access_token': self.access_token,
+                        'openid'      : self.openid,
+                        'lang'        : 'zh_CN'
+                    }
+                    url = 'https://api.weixin.qq.com/sns/userinfo?' + urllib.urlencode(sorted(args.items()))
+                    response = yield http_client.fetch(url)
+                    data = json_decode(response.body)
+                    if not self.user.get("weixin_data",None):
+                        self.user["weixin_data"] = {}
+                    self.user["weixin_data"][self.app] = data
+                    nomagic.auth.update_user(self.user_id,self.user)
+                    print "=========="
+
+                else:
+                    # if not users[user_id].get("weixin",{}).get(app,{}).get("weixin_data",{}).get("unionid",""):
+                    if entity_id:
+                        redirect_uri = 'http://www.hotpoor.org/home/event/%s?app=%s' % (entity_id, app)
+                    else:
+                        redirect_uri = 'http://www.hotpoor.org/home/event?app=%s' % app
+                    args = {
+                        'appid'            : weixin_apps_dev_info[app].get("AppId",""),
+                        'redirect_uri'     : redirect_uri,
+                        'response_type'    : 'code',
+                        'scope'            : 'snsapi_userinfo',
+                        'state'            : 'hotpoor'
+                    }
+                    url = 'https://open.weixin.qq.com/connect/oauth2/authorize?' + urllib.urlencode(sorted(args.items())) + '#wechat_redirect'
+                    self.redirect(url)
+                    return
+        self.user_headimgurl = self.user.get("weixin_data",{}).get(self.app,{}).get("headimgurl","https://dn-shimo-image.qbox.me/gyOX61VBhFkZOpx6.jpg")
+        self.title = u"序·契约の精神 | Home Event"
+        if "Mobile" in user_agent:
+            if "Android" in user_agent:
+                self.device_type = "Android"
+                # self.render("template/hotpoor_home_map_android.html")
+                self.render("template/hotpoor_home_event_ios.html")
+            else:
+                self.device_type = "iOS"
+                self.render("template/hotpoor_home_event_ios.html")
+        else:
+            self.device_type = "Desktop"
+            # self.render("template/hotpoor_home_map_desktop.html")
+            self.render("template/hotpoor_home_event_ios.html")
+        return
 
 settings = {
     "static_path":os.path.join(os.path.dirname(__file__),"static"),
