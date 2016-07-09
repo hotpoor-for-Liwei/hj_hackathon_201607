@@ -1,0 +1,166 @@
+<html>
+<head>
+    <title>微信支付</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="format-detection" content="telephone=no"/>
+    <script src="/static/js/jquery-1.11.3.min.js"></script>
+    <script src="/static/js/jweixin-1.0.0.js"></script>
+    <style type="text/css">
+        .weixin_pay_btn{
+            width: 200px;
+            height: 40px;
+            color: white;
+            background: #25c400;
+            border-radius: 4px;
+            line-height: 40px;
+            font-size: 16px;
+        }
+        .weixin_pay_btn_success{
+            width: 200px;
+            height: 40px;
+            color: black;
+            border-radius: 4px;
+            line-height: 40px;
+            font-size: 16px;   
+        }
+    </style>
+</head>
+<body>
+    <div class="div_test" onclick="shareToWeixinFriends()" style="display:none;">分享到朋友圈</div>
+    <div class="div_test" onclick="" style="display:none;">分享给朋友</div>
+    {% if handler.openid %}
+    <div align="center">
+        <div><img src="/static/img/{{ handler.app }}_weixin_pay_logo.jpg" style="width:300px;height:150px;"></div>
+        {% if handler.payment_status == u"未支付" %}
+        <div class="weixin_pay_btn" onclick="wechatPayAction()">微信支付</div>
+        <div class="weixin_pay_btn_success" style="display:none;">已支付成功</div>
+        {% elif handler.payment_status == u"已支付" %}
+        <div class="weixin_pay_btn_success" style="">订单已支付</div>
+        {% else %}
+        <div class="weixin_pay_btn_success" style="">订单处理中</div>
+        {% end if %}
+    </div>
+    {% end if %}
+</body>
+</html>
+<script type="text/javascript">
+    //微信JSSDK
+    wx.config({
+        debug: false,
+        appId: '{{ handler.wx_appid }}',
+        timestamp: {{ handler.wx_timestamp }},
+        nonceStr: '{{ handler.wx_noncestr }}',
+        signature: '{{ handler.wx_signature }}',
+        jsApiList: [
+            'checkJsApi',
+            'onMenuShareTimeline',
+            'onMenuShareAppMessage',
+            'onMenuShareQQ',
+            'onMenuShareWeibo',
+            'hideMenuItems',
+            'showMenuItems',
+            'hideAllNonBaseMenuItem',
+            'showAllNonBaseMenuItem',
+            'translateVoice',
+            'startRecord',
+            'stopRecord',
+            'onRecordEnd',
+            'playVoice',
+            'pauseVoice',
+            'stopVoice',
+            'uploadVoice',
+            'downloadVoice',
+            'chooseImage',
+            'previewImage',
+            'uploadImage',
+            'downloadImage',
+            'getNetworkType',
+            'openLocation',
+            'getLocation',
+            'hideOptionMenu',
+            'showOptionMenu',
+            'closeWindow',
+            'scanQRCode',
+            'chooseWXPay',
+            'openProductSpecificView',
+            'addCard',
+            'chooseCard',
+            'openCard'
+        ],
+    });
+    
+    function wechatPayAction (node) {
+        wx.chooseWXPay({
+            timestamp: {{ handler.timestamp }},
+            // timestamp: '{{ handler.timestamp }}',
+            // timestamp: parseInt(new Date().getTime()/1000), // 支付签名时间戳，注意微信jssdk中的所有使用timestamp字段均为小写。但最新版的支付后台生成签名使用的timeStamp字段名需大写其中的S字符
+            nonceStr: '{{ handler.nonce }}', // 支付签名随机串，不长于 32 位
+            package: 'prepay_id={{ handler.prepay_id }}', // 统一支付接口返回的prepay_id参数值，提交格式如：prepay_id=***）
+            signType: 'MD5', // 签名方式，默认为'SHA1'，使用新版支付需传入'MD5'
+            paySign: '{{ handler.pay_sign }}', // 支付签名
+            success: function (res) {
+                // 支付成功后的回调函数
+                $(".weixin_pay_btn").hide();
+                $(".weixin_pay_btn_success").show();
+            }
+        });
+    }
+
+
+    function shareToWeixinFriends (argument) {
+        wx.onMenuShareAppMessage({
+            title: '设置内容', // 分享标题
+            desc: '123', // 分享描述
+            link: 'http://baidu.com', // 分享链接
+            imgUrl: 'http://7i7jnw.com1.z0.glb.clouddn.com/ea09cd0f382d47e8bcb7802b81d02701_3d4b792b72584c08d633e57dc9a43cb3?imageView2/1/w/200/h/200', // 分享图标
+            type: '', // 分享类型,music、video或link，不填默认为link
+            dataUrl: '', // 如果type是music或video，则要提供数据链接，默认为空
+            success: function () { 
+                // 用户确认分享后执行的回调函数
+                alert("success");
+            },
+            cancel: function () { 
+                // 用户取消分享后执行的回调函数
+                alert("fail");
+            }
+        });
+    }
+    wx.ready(function(){
+        wx.hideAllNonBaseMenuItem();
+        wx.onMenuShareAppMessage({
+            title: '预设内容1', // 分享标题
+            desc: '123', // 分享描述
+            link: 'http://baidu.com', // 分享链接
+            imgUrl: 'http://7i7jnw.com1.z0.glb.clouddn.com/ea09cd0f382d47e8bcb7802b81d02701_3d4b792b72584c08d633e57dc9a43cb3?imageView2/1/w/200/h/200', // 分享图标
+            type: '', // 分享类型,music、video或link，不填默认为link
+            dataUrl: '', // 如果type是music或video，则要提供数据链接，默认为空
+            success: function () { 
+                // 用户确认分享后执行的回调函数
+                alert("success");
+            },
+            cancel: function () { 
+                // 用户取消分享后执行的回调函数
+                alert("fail");
+            }
+        });
+        
+        wx.onMenuShareTimeline({
+            title: '预设内容1', // 分享标题
+            link: 'http://baidu.com', // 分享链接
+            imgUrl: 'http://7i7jnw.com1.z0.glb.clouddn.com/ea09cd0f382d47e8bcb7802b81d02701_3d4b792b72584c08d633e57dc9a43cb3?imageView2/1/w/200/h/200', // 分享图标
+            success: function () { 
+                // 用户确认分享后执行的回调函数
+            },
+            cancel: function () { 
+                // 用户取消分享后执行的回调函数
+            }
+        });
+        wx.getNetworkType({
+            success: function (res) {
+                var networkType = res.networkType; // 返回网络类型2g，3g，4g，wifi
+                console.log(networkType);
+            }
+        });
+    });
+</script>
