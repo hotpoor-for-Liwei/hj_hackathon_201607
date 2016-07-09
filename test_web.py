@@ -74,7 +74,35 @@ weixin_JS_SDK_jsapi_tickets = {}
 weixin_JS_SDK_access_token_timers = {}
 
 
+class CheckExcelAPIHandler(WebRequest):
+    def get(self):
+        self.finish({u"info":u"It's necessary to check excel file."})
+    def post(self):
+        # upload_path = os.path.join(os.path.dirname(__file__),'files')
+        file_metas = self.request.files['file']
+        print file_metas
+        data = xlrd.open_workbook(file_contents=file_metas[0].get('body'),formatting_info=1)
+        print data.sheet_names()
+        print u"Sheet数量:%s" % len(data.sheets())
+        for table in data.sheets():
+            nrows = table.nrows
+            ncols = table.ncols
+            print u"%s行%s列" % (nrows,ncols)
+            for i in range(nrows):
+                print table.row_values(i)
+                for j in range(ncols):
+                    print table.cell_value(i,j)
+                    print table.cell(i,j)
+                    # print table.cell_xf_index(i,j)
+                    print "========"
 
+
+
+        data_type = self.get_argument("type")
+        print "data_type: %s" % data_type
+
+
+        self.finish({u"type":u"excel",u"data":{}})
 
 
 
@@ -89,7 +117,7 @@ application = tornado.web.Application([
     (r"/api/file/check_excel",CheckExcelAPIHandler),
 
     (r"/api/user/update_weixin_data/",UpdateWeixinDataUserAPIHandler),
-    
+
     #==========================
     #微信相关服务器配置、API和支付等
     #==========================
@@ -101,7 +129,7 @@ application = tornado.web.Application([
     (r"/wechat/webpaytest/callback/(.*)",WechatWebpayTestCallbackHandler),
     #支付回调URL 微信扫码支付
     (r"/wechat/qrcodepaybackurl/",WechatQrcodepaybackurlHandler),
-    
+
     (r"/wechat/developer/api/hotpoor",WechatDeveloperAPIHotpoorHandler),
 
     #==========================
