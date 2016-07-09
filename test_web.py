@@ -651,6 +651,24 @@ application = tornado.web.Application([
     (r"/home/tools/webgl_video_panorama_equirectangular", HomeToolsWebglVideoPanoramaEquirectangularHandler),
 
     #==========================
+    #/event/*产品系列
+    #==========================
+    (r"/home/event/api/order_list",HomeEventOrdersListAPIHandler),
+    (r"/home/event/api/add_order",HomeEventAddOrderAPIHandler),
+    (r"/home/event/api/update_order",HomeEventUpdateOrderAPIHandler),
+
+    (r"/home/event/api/editors_list",HomeEventEditorsListAPIHandler),
+    (r"/home/event/api/add_editor",HomeEventAddEditorAPIHandler),
+    (r"/home/event/api/remove_editor",HomeEventRemoveEditorAPIHandler),
+
+    (r"/home/event/api/members_list",HomeEventMembersListAPIHandler),
+    (r"/home/event/api/add_member",HomeEventAddMemberAPIHandler),
+    (r"/home/event/api/remove_member",HomeEventRemoveMemberAPIHandler),
+
+    (r"/home/event/(.*)",HomeEventBaseHandler),
+    (r"/home/event",HomeEventHandler),
+
+    #==========================
     #/api/*产品系列
     #==========================
     (r"/api/weixin/hotpoor/download",   WeixinDownloadHotpoorAPIHandler),
