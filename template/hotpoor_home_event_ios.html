@@ -6,7 +6,7 @@
     <meta name="format-detection" content="telephone=no"/>
     <script src="/static/js/jquery-1.11.3.min.js"></script>
     <script src="/static/js/jweixin-1.0.0.js"></script>
-    <link rel="stylesheet" type="text/css" href="/static/css/hotpoor_home_event.css?v=1.10">
+    <link rel="stylesheet" type="text/css" href="/static/css/hotpoor_home_event.css?v=1.14">
     <style type="text/css">
     body{
         overflow-y: auto;
@@ -138,6 +138,26 @@
         box-shadow: 0px 2px 4px rgba(0,0,0,0.16), 0px 1px 2px rgba(0,0,0,0.16);
         cursor: pointer;
     }
+    #content_area_base{
+        position: fixed;
+        bottom: 0px;
+        left: 0px;
+        width: 100%;
+        height: 60px;
+        background-color: rgba(0,0,0,0.8);
+    }
+    #comment_base_area{
+        position: fixed;
+        right: 0px;
+        top: 0px;
+        width: 300px;
+        height: 300px;
+        overflow-y: auto;
+        border-radius: 0px 0px 0px 3px;
+        box-shadow: 0px 1px 2px rgba(0,0,0,0,0.26);
+        color: #42d048;
+        background-color: rgba(0,0,0,0.9);
+    }
     </style>
 </head>
 <body>
@@ -145,6 +165,9 @@
         <div id="event_order_list_new" style="display:none;">点击加载最新</div>
         <div id="event_order_list">order列表</div>
         <div id="event_order_list_old" style="display:none;">点击加载往昔</div>
+    </div>
+    <div id="comment_base_area" style="display:none;">
+        <div id="comment_base_list"></div>
     </div>
 
     <div id="event_add" class="event_base_btns" style="display:none;">创建一个新契约</div>
@@ -163,6 +186,9 @@
             </div>
         </div>
     </div>
+    <div id="content_area_base" style="display:none;">
+        <button id="content_submit">send ws info</button>
+    </div>
 </body>
 </html>
 <script type="text/javascript">
@@ -171,6 +197,7 @@
     var AIM_TYPE = "{{ handler.aim_type }}";
     var APP = "{{ handler.app }}";
     var MEMBERS_JSON = {};
+    var ORDER_WEBSOCKET_URL = "ws://"+window.location.host+"/ws?order_id="+AIM_ID;
 </script>
 <script type="text/javascript">
     event_add_net = false;
@@ -302,40 +329,111 @@
         _head_style_plus = "";
         for (_i in _headers){
             if (_headers.length == 2 && _i <= 1){
-                _head_style_plus = "margin-top:11px;";
+                _head_style_plus = "margin-top:14px;";
             }else if (_headers.length == 3 && _i == 0){
-                _head_style_plus = "margin-left:11px;";
+                _head_style_plus = "margin-left:14px;";
             }else if (_headers.length == 5 && _i == 0){
-                _head_style_plus = "margin-left:7px;margin-top:7px;";
+                _head_style_plus = "margin-left:10px;margin-top:10px;";
             }else if (_headers.length == 5 && _i == 1){
-                _head_style_plus = "margin-top:7px;";
+                _head_style_plus = "margin-top:10px;";
             }else if (_headers.length == 6 && _i <= 2){
-                _head_style_plus = "margin-top:7px;";
+                _head_style_plus = "margin-top:10px;";
             }else if (_headers.length == 7 && _i == 0){
-                _head_style_plus = "margin-left:14px;margin-right:14px;";
+                _head_style_plus = "margin-left:18px;margin-right:18px;";
             }else if (_headers.length == 8 && _i == 0){
-                _head_style_plus = "margin-left:7px;";
+                _head_style_plus = "margin-left:10px;";
             }else{
                 _head_style_plus = "";
             }
             _headers_html += "<div class=\"event_order_line_head "+_head_class+"\" style=\""+_head_style_plus+"\"><img src=\""+MEMBERS_JSON[_headers[_i]]["headimgurl"]+"\"></div>";
         }
 
-        _remark_last = _data["remark"][0]
+        _remark_last = _data["remark"][0];
         _remark_html = ""
         if (USER_ID == _remark_last[0]){
             _remark_html = $('<ct><ct>').text(_remark_last[1]).html();
         }else{
             _remark_html = $('<ct><ct>').text(MEMBERS_JSON[_remark_last[0]]["name"]+": "+_remark_last[1]).html();
         }
-        
+        _date_html = formatDate(_data["createtime"]*1000);
         _html = "<div class=\"event_order_line\" data-id=\""+_id+"\" align=\"center\">"
                 +"<div class=\"event_order_line_head_area\">"+_headers_html+"</div>"
                 +"<div class=\"event_order_line_title\">"+_data["title"]+"</div>"
                 +"<div class=\"event_order_line_last_remark\">"+_remark_html+"</div>"
+                +"<div class=\"event_order_line_date\">"+_date_html+"</div>"
                 +"<div class=\"event_order_line_bottom\"></div>"
         +"</div>";
         return _html;
+    }
+    function formatDate (now) {
+        var comment_time_now, date, hour, minute, month, now_date, year;
+        now_date = new Date(now);
+        comment_time_now = new Date();
+        year = now_date.getFullYear();
+        month = now_date.getMonth() + 1;
+        date = now_date.getDate();
+        hour = now_date.getHours();
+        minute = now_date.getMinutes();
+        if (hour < 10) {
+            hour = "0" + hour;
+        }
+        if (minute < 10) {
+            minute = "0" + minute;
+        }
+        if (comment_time_now.getFullYear() === year && comment_time_now.getMonth() + 1 === month && comment_time_now.getDate() === date) {
+        return hour + ":" + minute;
+        }
+        if (comment_time_now.getFullYear() === year) {
+            return month + "月" + date + "日";
+        }
+        return year + "/" + month + "/" + date;
+    };
+    function restart_loading_ws(){
+        if(AIM_TYPE=="order"){
+            $("#content_area_base").show();
+            $("#comment_base_area").show();
+            if ("WebSocket" in window){
+                ws = new WebSocket(ORDER_WEBSOCKET_URL);
+                $("#comment_base_list").prepend("<div>build new websocket</div>");
+                hotpoor_websocket = "[___]websocket";
+                ws.onopen = function(evt){
+                    hotpoor_websocket = "[open_ok]websocket";
+                    ws.send(JSON.stringify({"app":"hotpoor","type":"order","subtype":"event_order","info":"ok","user":USER_ID}));
+                    console.log("WebSocketOpen!");
+                    $("#comment_base_list").prepend("<div>"+hotpoor_websocket+"</div>");
+                };
+                ws.onmessage = function(evt){
+                    console.log(evt);
+                    console.log("=======");
+                    _data=JSON.parse(evt.data);
+                    // console.log(_data);
+                }
+                ws.onclose = function(evt){
+                    if (hotpoor_websocket == "[open_ok]websocket") {
+                        hotpoor_websocket = "[close_ok]websocket";
+                    }else if(hotpoor_websocket == "[___]websocket"){
+                        hotpoor_websocket = "[no_work_IOS_5]websocket";
+                    }
+                    console.log(hotpoor_websocket);
+                    console.log("WebSocketClosed!");
+                    for (b in evt){
+                        $("#error_info").append("qishu~: CLOSE EVENT:"+b+":"+evt[b]+"<br>");
+                    }
+                    $("#comment_base_list").prepend("<div>"+hotpoor_websocket+"</div>");
+                };  
+                ws.onerror = function(evt){
+                    console.log("WebSocketError!");
+                    $("#comment_base_list").prepend("<div>WebSocketError</div>");
+                    setTimeout("restart_loading_ws()",1000);
+                };
+                $("#comment_base_list").prepend("<div>[===]</div>");
+            }else{
+                $("#comment_base_list").prepend("<div>[NO]websocket</div>");
+            }
+        }
+    }
+    window.onload = function(){
+        restart_loading_ws();
     }
 </script>
 {% if handler.openid %}

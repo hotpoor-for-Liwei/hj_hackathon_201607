@@ -434,22 +434,28 @@ class WechatWebpayTestCallbackHandler(WebRequest):
                         nomagic.order.update_order(order_id,order)
                         conn.execute("INSERT INTO index_weixin_pay (user_id,order_id,fee,app,createtime,transaction_id,out_trade_no,done,finishtime) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s)", user_id,order_id,fee,app,board[2],transaction_id,out_trade_no,1,board[2])
 
-class WebSocketHandler(tornado.websocket.WebSocketHandler):
+h_clients = {}
+
+class WebSocketHandler(WebSocket):
     clients = set()
     @staticmethod
     def send_to_all(message):
         for c in WebSocketHandler.clients:
             c.write_message(message)
-        print message
-
     def open(self):
-        self.write_message("Welcome to WebSocket")
-        WebSocketHandler.send_to_all(str(id(self)) + 'has joined')
+        self.order_id = self.get_argument("order_id","")
+        msg = ["JOIN",str(id(self)) + 'has joined room:'+self.order_id]
+        msg = json_encode(msg);
+        WebSocketHandler.send_to_all(msg)
         WebSocketHandler.clients.add(self)
-
+    def on_message(self, message):
+        WebSocketHandler.send_to_all(message)
     def on_close(self):
         WebSocketHandler.clients.remove(self)
-        WebSocketHandler.send_to_all(str(id(self)) + 'has left')
+        msg = ["LEAVE",str(id(self)) + 'has left room:'+self.order_id]
+        msg = json_encode(msg);
+        WebSocketHandler.send_to_all(msg)
+
 class UserLogoutAPIHandler(WebRequest):
     def get(self):
         self.post()
