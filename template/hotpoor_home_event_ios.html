@@ -153,10 +153,13 @@
         width: 300px;
         height: 300px;
         overflow-y: auto;
+        overflow-x: hidden;
+        font-size: 12px;
         border-radius: 0px 0px 0px 3px;
-        box-shadow: 0px 1px 2px rgba(0,0,0,0,0.26);
+        box-shadow: 0px 2px 4px rgba(0,0,0,0.26), 0px 1px 2px rgba(0,0,0,0.26);;
         color: #42d048;
         background-color: rgba(0,0,0,0.9);
+        word-break: break-word;
     }
     </style>
 </head>
@@ -187,6 +190,7 @@
         </div>
     </div>
     <div id="content_area_base" style="display:none;">
+        <textarea id="content_info"></textarea>
         <button id="content_submit">send ws info</button>
     </div>
 </body>
@@ -197,7 +201,8 @@
     var AIM_TYPE = "{{ handler.aim_type }}";
     var APP = "{{ handler.app }}";
     var MEMBERS_JSON = {};
-    var ORDER_WEBSOCKET_URL = "ws://"+window.location.host+"/ws?order_id="+AIM_ID;
+    // var ORDER_WEBSOCKET_URL = "ws://"+window.location.host+"/ws?order_id="+AIM_ID;
+    var ORDER_WEBSOCKET_URL = "ws://www.hotpoor.org:8036/ws?order_id="+AIM_ID;
 </script>
 <script type="text/javascript">
     event_add_net = false;
@@ -390,6 +395,7 @@
     };
     function restart_loading_ws(){
         if(AIM_TYPE=="order"){
+            $("#comment_base_list").prepend("<div>"+ORDER_WEBSOCKET_URL+"</div>");
             $("#content_area_base").show();
             $("#comment_base_area").show();
             if ("WebSocket" in window){
@@ -398,15 +404,14 @@
                 hotpoor_websocket = "[___]websocket";
                 ws.onopen = function(evt){
                     hotpoor_websocket = "[open_ok]websocket";
-                    ws.send(JSON.stringify({"app":"hotpoor","type":"order","subtype":"event_order","info":"ok","user":USER_ID}));
+                    ws.send(JSON.stringify(["JOIN",{"app":"hotpoor","type":"order","subtype":"event_order","info":"ok","user":USER_ID,"room":AIM_ID},AIM_ID]));
                     console.log("WebSocketOpen!");
                     $("#comment_base_list").prepend("<div>"+hotpoor_websocket+"</div>");
                 };
                 ws.onmessage = function(evt){
-                    console.log(evt);
-                    console.log("=======");
                     _data=JSON.parse(evt.data);
-                    // console.log(_data);
+                    console.log(_data);
+                    $("#comment_base_list").prepend("<div>"+_data[1]["content"]+"</div>");
                 }
                 ws.onclose = function(evt){
                     if (hotpoor_websocket == "[open_ok]websocket") {
@@ -416,9 +421,7 @@
                     }
                     console.log(hotpoor_websocket);
                     console.log("WebSocketClosed!");
-                    for (b in evt){
-                        $("#error_info").append("qishu~: CLOSE EVENT:"+b+":"+evt[b]+"<br>");
-                    }
+                    console.log(evt);
                     $("#comment_base_list").prepend("<div>"+hotpoor_websocket+"</div>");
                 };  
                 ws.onerror = function(evt){
@@ -431,6 +434,17 @@
                 $("#comment_base_list").prepend("<div>[NO]websocket</div>");
             }
         }
+        $("#content_submit").on("click",function(){
+            if($("#content_info").val()==""){
+
+            }else{
+                time = new Date();
+                time = time.getTime()/1000;
+                msg = ["COMMENT",{"user":USER_ID,"room":AIM_ID,"content":$("#content_info").val(),"timestamp":time},AIM_ID];
+                ws.send(JSON.stringify(msg));
+                $("#content_info").val("");
+            }
+        });
     }
     window.onload = function(){
         restart_loading_ws();

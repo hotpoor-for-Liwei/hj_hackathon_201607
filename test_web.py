@@ -434,25 +434,36 @@ class WechatWebpayTestCallbackHandler(WebRequest):
                         nomagic.order.update_order(order_id,order)
                         conn.execute("INSERT INTO index_weixin_pay (user_id,order_id,fee,app,createtime,transaction_id,out_trade_no,done,finishtime) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s)", user_id,order_id,fee,app,board[2],transaction_id,out_trade_no,1,board[2])
 
-h_clients = {}
-
 class WebSocketHandler(WebSocket):
     clients = set()
+    h_clients = {}
     @staticmethod
     def send_to_all(message):
-        for c in WebSocketHandler.clients:
-            c.write_message(message)
+        # for c in WebSocketHandler.clients:
+        #     c.write_message(message)
+        info = json_decode(message)
+        if len(info) == 3:
+            for c in WebSocketHandler.h_clients.get(info[2],[]):
+                c.write_message(message)
     def open(self):
         self.order_id = self.get_argument("order_id","")
-        msg = ["JOIN",str(id(self)) + 'has joined room:'+self.order_id]
-        msg = json_encode(msg);
-        WebSocketHandler.send_to_all(msg)
+        h_clients_base = set()
+        h_clients_now = WebSocketHandler.h_clients.get(self.order_id,[])
+        h_clients_base = h_clients_base | set(h_clients_now)
+        h_clients_base.add(self)
+        WebSocketHandler.h_clients[self.order_id] = h_clients_base
         WebSocketHandler.clients.add(self)
+        print WebSocketHandler.h_clients
     def on_message(self, message):
         WebSocketHandler.send_to_all(message)
     def on_close(self):
+        h_clients_base = set()
+        h_clients_now = WebSocketHandler.h_clients.get(self.order_id,[])
+        h_clients_base = h_clients_base | set(h_clients_now)
+        h_clients_base.remove(self)
+        WebSocketHandler.h_clients[self.order_id] = h_clients_base
         WebSocketHandler.clients.remove(self)
-        msg = ["LEAVE",str(id(self)) + 'has left room:'+self.order_id]
+        msg = ["LEAVE",{"content":str(id(self)) + 'has left room:'+self.order_id},self.order_id]
         msg = json_encode(msg);
         WebSocketHandler.send_to_all(msg)
 
