@@ -146,6 +146,20 @@
         height: 60px;
         background-color: rgba(0,0,0,0.8);
     }
+    #content_headimgurl{
+        position: absolute;
+        width: 50px;
+        height: 50px;
+        left: 5px;
+        top: 5px;
+        border-radius: 3px;
+        overflow:hidden;
+    }
+    #content_headimgurl>img{
+        display: inline-block;
+        width: 100%;
+        height: 100%;
+    }
     #comment_base_area{
         position: fixed;
         right: 0px;
@@ -161,6 +175,95 @@
         background-color: rgba(0,0,0,0.9);
         word-break: break-word;
     }
+    #content_info{
+        margin-left: 60px;
+        width: calc(100% - 130px);
+        width: -webkit-calc(100% - 130px);
+        width: -moz-calc(100% - 130px);
+        width: -ms-calc(100% - 130px);
+        width: -o-calc(100% - 130px);
+        height: 40px;
+        margin-top: 5px;
+        border: 0;
+        padding: 5px;
+        border-radius: 3px;
+        resize: none;
+    }
+    #content_submit{
+        position: absolute;
+        right: 5px;
+        top: 5px;
+        width: 50px;
+        height: 50px;
+        border-radius: 3px;
+        border: 0;
+        background-image: url(/static/img/send_nice.png);
+        background-size: 50px 50px;
+        background-repeat: no-repeat;
+        background-position: center;
+    }
+    #comment_base_list{
+        padding: 2px 6px 6px 6px;
+    }
+    #question_area_base{
+        position: fixed;
+        bottom: 80px;
+        height: 120px;
+        width: 300px;
+        left: calc((100% - 300px) / 2 );
+        left: -webkit-calc((100% - 300px) / 2 );
+        left: -moz-calc((100% - 300px) / 2 );
+        left: -ms-calc((100% - 300px) / 2 );
+        left: -o-calc((100% - 300px) / 2 );
+    }
+    #question_value_now{
+        width: 100%;
+        height: 10px;
+        position: relative;
+        border-radius: 4px;
+        overflow: hidden;
+        box-shadow: 0px 2px 4px rgba(0,0,0,0.16);
+    }
+    #question_value_now_base{
+        width: 100%;
+        position: absolute;
+        left: 0px;
+        top: 0px;
+        height: 10px;
+        background: #8BC34A;
+    }
+    #question_value_now_line{
+        width: 50%;
+        position: absolute;
+        left: 0px;
+        top: 0px;
+        height: 10px;
+        background: #dd4b39;
+    }
+    #question_control{
+        width: 100%;
+    }
+    .question_control_btn{
+        margin-left: 3%;
+        min-height: 50px;
+        width:44%;
+        border-radius: 10px;
+        border: 0;
+        color: white;
+        box-shadow: 0px 2px 4px rgba(0,0,0,0.16),0px 1px 2px rgba(0,0,0,0.16);
+    }
+    .question_control_a{
+        background-color: #dd4b39;
+    }
+    .question_control_b{
+        background-color: #8BC34A;
+    }
+    #question_text{
+        text-align: center;
+        height: 50px;
+        padding-top: 10px;
+        padding-bottom: 10px;
+    }
     </style>
 </head>
 <body>
@@ -168,6 +271,17 @@
         <div id="event_order_list_new" style="display:none;">点击加载最新</div>
         <div id="event_order_list">order列表</div>
         <div id="event_order_list_old" style="display:none;">点击加载往昔</div>
+    </div>
+    <div id="question_area_base" style="display:none">
+         <div id="question_value_now">
+             <div id="question_value_now_base"></div>
+             <div id="question_value_now_line"></div>
+         </div>
+        <div id="question_text">静静等待问题的到来...</div>
+        <div id="question_control">
+            <button class='question_control_a question_control_btn' data-value="A">选项 A 哦哦</button>
+            <button class='question_control_b question_control_btn' data-value="B">选项 B 恩恩</button>
+        </div>
     </div>
     <div id="comment_base_area" style="display:none;">
         <div id="comment_base_list"></div>
@@ -190,13 +304,17 @@
         </div>
     </div>
     <div id="content_area_base" style="display:none;">
+        <div id="content_headimgurl"><img src="{{ handler.user_headimgurl }}"></div>
         <textarea id="content_info"></textarea>
-        <button id="content_submit">send ws info</button>
+        <button id="content_submit"></button>
     </div>
 </body>
 </html>
 <script type="text/javascript">
     var USER_ID = "{{ handler.user_id }}";
+    var USER_HEADIMGURL = "{{ handler.user_headimgurl }}";
+    var USER_NAME = "{{ handler.user_name }}";
+    var OWNER_ID = "{{ handler.owner_id }}";
     var AIM_ID = "{{ handler.aim_id }}";
     var AIM_TYPE = "{{ handler.aim_type }}";
     var APP = "{{ handler.app }}";
@@ -398,20 +516,33 @@
             $("#comment_base_list").prepend("<div>"+ORDER_WEBSOCKET_URL+"</div>");
             $("#content_area_base").show();
             $("#comment_base_area").show();
+            $("#question_area_base").show();
             if ("WebSocket" in window){
                 ws = new WebSocket(ORDER_WEBSOCKET_URL);
                 $("#comment_base_list").prepend("<div>build new websocket</div>");
                 hotpoor_websocket = "[___]websocket";
                 ws.onopen = function(evt){
                     hotpoor_websocket = "[open_ok]websocket";
-                    ws.send(JSON.stringify(["JOIN",{"app":"hotpoor","type":"order","subtype":"event_order","info":"ok","user":USER_ID,"room":AIM_ID},AIM_ID]));
+                    ws.send(JSON.stringify(["JOIN",{"nickname":USER_NAME,"app":"hotpoor","type":"order","subtype":"event_order","info":"ok","user":USER_ID,"room":AIM_ID},AIM_ID]));
                     console.log("WebSocketOpen!");
                     $("#comment_base_list").prepend("<div>"+hotpoor_websocket+"</div>");
                 };
                 ws.onmessage = function(evt){
                     _data=JSON.parse(evt.data);
                     console.log(_data);
-                    $("#comment_base_list").prepend("<div>"+_data[1]["content"]+"</div>");
+                    if (_data[0]=="JOIN") {
+                        $("#comment_base_list").prepend("<div>"+_data[1]["nickname"]+": "+"加入即时答题对战间"+"</div>");
+                    }else if (_data[0]=="COMMENT"){
+                        $("#comment_base_list").prepend("<div>"+_data[1]["nickname"]+": "+_data[1]["content"]+"</div>");
+                    }else if (_data[0]=="QUESTION"){
+                        $("#comment_base_list").prepend("<div>"+_data[1]["nickname"]+": 提出了问题："+_data[1]["content"]+"</div>");
+                        $("#question_text").text(_data[1]["content"]);
+                        console.log(_data[1]["a"])
+                        $(".question_control_a").text(_data[1]["a"]);
+                        $(".question_control_b").text(_data[1]["b"]);
+                    }else if (_data[0]=="ANSWER"){
+
+                    }
                 }
                 ws.onclose = function(evt){
                     if (hotpoor_websocket == "[open_ok]websocket") {
@@ -435,16 +566,58 @@
             }
         }
         $("#content_submit").on("click",function(){
-            if($("#content_info").val()==""){
+            content = $("#content_info").val()
+            msg_type = "COMMENT";
+            a = "";
+            b = "";
+            if(content == ""){
 
             }else{
                 time = new Date();
                 time = time.getTime()/1000;
-                msg = ["COMMENT",{"user":USER_ID,"room":AIM_ID,"content":$("#content_info").val(),"timestamp":time},AIM_ID];
+                if(content.indexOf("HQUESTION//")==0){
+                    msg_type = "QUESTION";
+                    content = content.replace("HQUESTION//","");
+                    if (content.split("HC//").length==3){
+                        a = content.split("HC//")[1];
+                        b = content.split("HC//")[2];
+                        content = content.split("HC//")[0];
+                    }else{
+                        msg_type = "COMMENT";
+                    }
+                }
+                msg = [msg_type,{"nickname":USER_NAME,"user":USER_ID,"room":AIM_ID,"content":content,"timestamp":time,"a":a,"b":b},AIM_ID];
                 ws.send(JSON.stringify(msg));
                 $("#content_info").val("");
             }
         });
+        if (navigator.userAgent.indexOf("Mobile")>=0){
+            $("#question_control").on("touchend",".question_control_btn",function(evt){
+                time = new Date();
+                time = time.getTime()/1000;
+                value = $(this).attr("data-value")
+                content = $(this).text();
+                msg_type = "COMMENT";
+                msg = [msg_type,{"nickname":USER_NAME,"user":USER_ID,"room":AIM_ID,"content":content,"timestamp":time},AIM_ID];
+                ws.send(JSON.stringify(msg));
+                msg_type = "ANSWER";
+                msg = [msg_type,{"nickname":USER_NAME,"user":USER_ID,"room":AIM_ID,"content":content,"timestamp":time,"answer":value},AIM_ID];
+                ws.send(JSON.stringify(msg));
+            });
+        }else{
+            $("#question_control").on("mouseup",".question_control_btn",function(evt){
+                time = new Date();
+                time = time.getTime()/1000;
+                value = $(this).attr("data-value")
+                content = $(this).text();
+                msg_type = "COMMENT";
+                msg = [msg_type,{"nickname":USER_NAME,"user":USER_ID,"room":AIM_ID,"content":content,"timestamp":time},AIM_ID];
+                ws.send(JSON.stringify(msg));
+                msg_type = "ANSWER";
+                msg = [msg_type,{"nickname":USER_NAME,"user":USER_ID,"room":AIM_ID,"content":content,"timestamp":time,"answer":value},AIM_ID];
+                ws.send(JSON.stringify(msg));
+            });
+        }
     }
     window.onload = function(){
         restart_loading_ws();
